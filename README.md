@@ -51,7 +51,8 @@ mkdir -p ~/.config/systemd/user
 nano ~/.config/systemd/user/keep-audio-awake.service
 
 Paste the following:
-ini[Unit]
+
+[Unit]
 Description=Keep audio device awake
 After=pipewire.service pipewire-pulse.service
 Wants=pipewire.service pipewire-pulse.service
