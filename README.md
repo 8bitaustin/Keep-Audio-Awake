@@ -41,11 +41,15 @@ Press Ctrl+C to stop. While running, all other applications can play audio norma
 # Auto-start on Login (KDE / systemd)
 To have the program start automatically with your desktop session:
 1. Place the binary somewhere permanent:
-bashmkdir -p ~/.local/bin
+
+mkdir -p ~/.local/bin
 cp keep_audio_awake ~/.local/bin/keep_audio_awake
+
 2. Create the systemd user service:
-bashmkdir -p ~/.config/systemd/user
+
+mkdir -p ~/.config/systemd/user
 nano ~/.config/systemd/user/keep-audio-awake.service
+
 Paste the following:
 ini[Unit]
 Description=Keep audio device awake
@@ -59,16 +63,18 @@ RestartSec=5
 
 [Install]
 WantedBy=default.target
+
 3. Enable and start the service:
 bashsystemctl --user daemon-reload
 systemctl --user enable --now keep-audio-awake.service
+
 4. Verify it is running:
-bashsystemctl --user status keep-audio-awake.service
+systemctl --user status keep-audio-awake.service
 The service will start automatically after PipeWire is ready on every login and will restart itself if it crashes.
 
 Verifying Your Setup
 To confirm you have the same hardware/software configuration this was developed for:
-bash# Should show HDA NVidia as card 1
+# Should show HDA NVidia as card 1
 cat /proc/asound/cards
 
 # Should show PulseAudio (on PipeWire ...)
