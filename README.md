@@ -27,7 +27,9 @@ sudo pacman -S libpulse
 
 # Ubuntu / Debian 
 sudo apt install libpulse-dev
+
 Compile:
+
 bashgcc keep_audio_awake.c -o keep_audio_awake -lpulse-simple -lpulse
 
 
