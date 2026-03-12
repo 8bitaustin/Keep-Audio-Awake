@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep audio device awake
+After=pipewire.service pipewire-pulse.service
+Wants=pipewire.service pipewire-pulse.service
+
+[Service]
+ExecStart=%h/.local/bin/keep_audio_awake
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
