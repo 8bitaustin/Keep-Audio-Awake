@@ -48,18 +48,23 @@ cp keep_audio_awake ~/.local/bin/keep_audio_awake
 2. Create the systemd user service:
 
 mkdir -p ~/.config/systemd/user
+
 nano ~/.config/systemd/user/keep-audio-awake.service
 
 Paste the following:
 
 [Unit]
 Description=Keep audio device awake
+
 After=pipewire.service pipewire-pulse.service
+
 Wants=pipewire.service pipewire-pulse.service
 
 [Service]
 ExecStart=%h/.local/bin/keep_audio_awake
+
 Restart=on-failure
+
 RestartSec=5
 
 [Install]
