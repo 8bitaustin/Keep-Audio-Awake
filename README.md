@@ -1,95 +1,139 @@
 # keep-audio-awake
-A small C program that prevents NVIDIA HDMI audio devices from sleeping on Linux, eliminating the audible pop/click and delay when audio playback begins.
 
-# The Problem
-On Linux systems with an NVIDIA GPU, the HDMI audio device is tied to the GPU's power state via vga_switcheroo. When no audio is playing, the system suspends the audio device to save power. This causes:
+My Legion desktop kept putting the audio device to sleep, which caused popping and crackling whenever audio first started playing. This happened on both Windows and Linux, but this is a fix specifically for Linux. It's a small program you can run as a systemd service to keep the audio channel open and prevent the device from sleeping.
 
-An audible pop or crackle at the start of every audio stream
-A brief delay before audio begins playing
-An audible click when audio stops and the device powers back down
+---
 
-This affects any application that plays audio through the NVIDIA HDMI output — browsers, media players, games, etc. Standard fixes such as setting options snd_hda_intel power_save=0 in /etc/modprobe.d/ or writing on to the PCI device's power/control sysfs entry do not solve this because the suspend is managed at the GPU/PipeWire level, not the ALSA level.
+## The Problem
 
-# The Solution
-keep_audio_awake opens a continuous silent audio stream through PipeWire's PulseAudio interface. This keeps the audio device active at all times without playing any audible sound and without blocking other applications from using the device.
+On Linux systems with an NVIDIA GPU, the HDMI audio device is tied to the GPU's power state. When no audio is playing, the system suspends the audio device to save power. This causes:
 
-# Requirements
+- An audible **pop or crackle** at the start of every audio stream
+- A brief **delay** before audio begins playing
+- An audible **click** when audio stops and the device goes back to sleep
 
-Linux with PipeWire (tested on CachyOS / Arch-based distros with PipeWire 1.6.1)
-NVIDIA GPU with HDMI audio (HDA NVidia in cat /proc/asound/cards)
-libpulse (PulseAudio client library — works transparently with PipeWire)
+This affects any application that plays audio through the NVIDIA HDMI output — browsers, media players, games, etc.
 
+You might try the usual advice of setting `power_save=0` in `/etc/modprobe.d/` or poking the PCI device's sysfs power control — these don't work. The suspend is happening at the GPU/PipeWire level, not the ALSA level, so those fixes never reach the right place.
 
-Building from Source
-Install the dependency:
+---
+
+## The Solution
+
+`keep_audio_awake` plays a continuous stream of silence through PipeWire. This keeps the audio device active at all times without making any sound and without blocking other apps from using it.
+
+---
+
+## Requirements
+
+- Linux with PipeWire (tested on CachyOS / Arch with PipeWire 1.6.1)
+- NVIDIA GPU with HDMI audio
+- `libpulse` (PulseAudio client library — works transparently with PipeWire)
+
+To confirm your setup matches:
+
+```bash
+# Should show "HDA NVidia" as one of the cards
+cat /proc/asound/cards
+
+# Should show "PulseAudio (on PipeWire ...)"
+pactl info | grep "Server Name"
+```
+
+---
+
+## Option A — Use the Precompiled Binary
+
+Download `keep_audio_awake` from the releases and skip to the **Auto-start** section below.
+
+---
+
+## Option B — Build from Source
+
+Install the build dependency:
+
+```bash
 # Arch / CachyOS / Manjaro
 sudo pacman -S libpulse
 
-# Ubuntu / Debian 
+# Ubuntu / Debian
 sudo apt install libpulse-dev
+```
 
 Compile:
 
-bashgcc keep_audio_awake.c -o keep_audio_awake -lpulse-simple -lpulse
+```bash
+gcc keep_audio_awake.c -o keep_audio_awake -lpulse-simple -lpulse
+```
 
+Run it manually to test:
 
-# Running
-bash/dash/fish
-
+```bash
 ./keep_audio_awake
+```
 
-Press Ctrl+C to stop. While running, all other applications can play audio normally.
+Play something in your browser or media player — the popping should be gone. Press `Ctrl+C` to stop.
 
-# Auto-start on Login (KDE / systemd)
-To have the program start automatically with your desktop session:
-1. Place the binary somewhere permanent:
+---
 
+## Auto-start on Login (KDE / systemd)
+
+Once you've confirmed it works, set it up as a service so it starts automatically with your desktop session.
+
+**1. Put the binary somewhere permanent:**
+
+```bash
 mkdir -p ~/.local/bin
 cp keep_audio_awake ~/.local/bin/keep_audio_awake
+```
 
-2. Create the systemd user service:
+**2. Create the service file:**
 
+```bash
 mkdir -p ~/.config/systemd/user
-
 nano ~/.config/systemd/user/keep-audio-awake.service
+```
 
-Paste the following:
+Paste this into the file:
 
+```ini
 [Unit]
 Description=Keep audio device awake
-
 After=pipewire.service pipewire-pulse.service
-
 Wants=pipewire.service pipewire-pulse.service
 
 [Service]
 ExecStart=%h/.local/bin/keep_audio_awake
-
 Restart=on-failure
-
 RestartSec=5
 
 [Install]
 WantedBy=default.target
+```
 
-3. Enable and start the service:
-bashsystemctl --user daemon-reload
+**3. Enable and start it:**
+
+```bash
+systemctl --user daemon-reload
 systemctl --user enable --now keep-audio-awake.service
+```
 
-4. Verify it is running:
+**4. Check it's running:**
+
+```bash
 systemctl --user status keep-audio-awake.service
-The service will start automatically after PipeWire is ready on every login and will restart itself if it crashes.
+```
 
-Verifying Your Setup
-To confirm you have the same hardware/software configuration this was developed for:
-# Should show HDA NVidia as card 1
-cat /proc/asound/cards
+The service will start automatically after PipeWire is ready on every login and restart itself if it ever crashes.
 
-# Should show PulseAudio (on PipeWire ...)
-pactl info | grep "Server Name"
+---
 
-How It Works
-The program uses the PulseAudio simple API (libpulse-simple) to open a playback stream connected to the system's default audio sink. It writes 100ms chunks of zeroed (silent) audio in a loop. Because it uses the PulseAudio/PipeWire layer rather than direct ALSA hardware access, the stream is mixed with other applications' audio transparently — no exclusive device locking occurs.
+## How It Works
 
-License
+The program uses the PulseAudio simple API (`libpulse-simple`) to open a playback stream on the default audio sink. It writes 100ms chunks of zeroed (silent) audio in a loop. Because it goes through PipeWire rather than talking directly to the ALSA hardware, it shares the device normally with everything else — no exclusive locking, no interference.
+
+---
+
+## License
+
 MIT
