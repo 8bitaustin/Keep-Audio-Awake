@@ -32,7 +32,10 @@ bashgcc keep_audio_awake.c -o keep_audio_awake -lpulse-simple -lpulse
 
 
 # Running
-bash./keep_audio_awake
+bash/dash/fish
+
+./keep_audio_awake
+
 Press Ctrl+C to stop. While running, all other applications can play audio normally.
 
 # Auto-start on Login (KDE / systemd)
